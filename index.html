@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Control Center</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#131b2e;--line:#293650;--text:#e8eefb;--muted:#91a0ba;--blue:#7c9cff;--green:#5de0a0;--red:#ff7185;--yellow:#ffd479}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,sans-serif}
+header{padding:24px max(20px,calc((100% - 1100px)/2));border-bottom:1px solid var(--line);background:#10172a}
+h1{font-size:clamp(24px,4vw,34px);margin:0}
+.sub,.muted{color:var(--muted)}
+main{max-width:1100px;margin:auto;padding:22px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px;min-width:0}
+.label{font-size:13px;color:var(--muted)}
+.value{font-size:26px;font-weight:700;margin-top:4px;overflow-wrap:anywhere}
+h2{font-size:18px;margin:0 0 14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+button{background:#243353;color:var(--text);border:1px solid #405477;padding:9px 13px;border-radius:9px;cursor:pointer;font:inherit}
+button:hover{filter:brightness(1.18)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:#3556a1}.danger{background:#652c3a;border-color:#a3485b}
+.status{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;background:#26334b;color:var(--muted)}
+.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--yellow)}
+.bar{height:8px;border-radius:8px;background:#26334b;overflow:hidden;margin:10px 0}
+.bar>div{height:100%;width:0;background:var(--blue);transition:width .3s}
+.task{padding:13px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.taskname{font-weight:600;overflow-wrap:anywhere}
+.taskmeta{font-size:13px;color:var(--muted)}
+.log{font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow:auto;color:#b7c5df}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:9px;padding:8px 0}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue)}
+footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:14px}.panel{padding:14px}}
+@media(max-width:380px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div>
+      <h1>◈ Agent Control Center</h1>
+      <div class="sub">Autonomous Agent · Runtime Monitor · Demo v0.1</div>
+    </div>
+    <span class="status warn" id="systemStatus">SIMULATION</span>
+  </div>
+</header>
+
+<main>
+  <section class="grid">
+    <div class="panel"><div class="label">任务总数</div><div class="value" id="total">3</div></div>
+    <div class="panel"><div class="label">已完成</div><div class="value ok" id="done">0</div></div>
+    <div class="panel"><div class="label">异常事件</div><div class="value warn" id="anomalies">0</div></div>
+    <div class="panel"><div class="label">模拟 API 成本</div><div class="value" id="cost">¥0.00</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <h2>运行控制</h2>
+      <span class="status" id="runStatus">IDLE</span>
+    </div>
+    <div class="controls">
+      <button class="primary" id="run">▶ 执行下一个任务</button>
+      <button id="add">＋ 添加任务</button>
+      <button id="inject">⚠ 注入异常</button>
+      <button class="danger" id="reset">重置模拟</button>
+    </div>
+    <div class="muted" style="margin-top:10px">所有操作仅改变当前网页中的模拟状态。</div>
+  </section>
+
+  <section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))">
+    <div class="panel">
+      <h2>🛡 Guardian 监控</h2>
+      <label class="toggle"><input type="checkbox" id="guardian" checked> Guardian 在线</label>
+      <label class="toggle"><input type="checkbox" id="detection" checked> 异常检测启用</label>
+      <label class="toggle"><input type="checkbox" id="budgetOn" checked> 预算限制启用</label>
+      <div class="label">单次模拟预算上限（人民币）</div>
+      <input id="budget" type="number" min="0.01" step="0.5" value="5" style="width:100%;margin-top:6px;padding:9px;background:#0b1020;border:1px solid var(--line);border-radius:8px;color:var(--text)">
+      <div class="bar"><div id="budgetBar"></div></div>
+      <div class="row"><span class="muted">预算使用情况</span><span id="budgetText">0%</span></div>
+      <div id="guardianMessage" class="ok" style="margin-top:12px">监控正常：允许低风险模拟任务</div>
+    </div>
+
+    <div class="panel">
+      <h2>📊 运行时状态</h2>
+      <div class="row"><span class="muted">执行引擎</span><span class="status">MOCK</span></div>
+      <div class="row" style="margin-top:12px"><span class="muted">权限网关</span><span class="status ok">SIMULATED</span></div>
+      <div class="row" style="margin-top:12px"><span class="muted">独立验证器</span><span class="status">DEMO ONLY</span></div>
+      <div class="row" style="margin-top:12px"><span class="muted">任务持久化</span><span class="status">未启用</span></div>
+      <p class="muted">真实版本还需要独立权限控制、持久化状态和基于实际证据的任务验收。</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="row"><h2>📋 任务队列</h2><span class="muted" id="queueText">等待执行</span></div>
+    <div id="tasks"></div>
+  </section>
+
+  <section class="panel">
+    <div class="row"><h2>📝 事件日志</h2><button id="clearLog">清空日志</button></div>
+    <div class="log" id="logs" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer>Agent Control Center · Front-end simulation · No API calls · No system access</footer>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const initialTasks=[
+    {name:"检查任务目标与验收条件",detail:"解析目标，生成可验证的完成标准",status:"待执行"},
+    {name:"执行只读环境检查",detail:"模拟读取状态，不修改任何文件",status:"待执行"},
+    {name:"独立验证执行结果",detail:"模拟检查证据与验收条件",status:"待执行"}
+  ];
+  let tasks=[],cost=0,anomalies=0,busy=false;
+  const money=n=>"¥"+n.toFixed(2);
+  function log(message,level="INFO"){
+    const time=new Date().toLocaleTimeString();
+    $("logs").textContent+=`[${time}] [${level}] ${message}\n`;
+    $("logs").scrollTop=$("logs").scrollHeight;
+  }
+  function render(){
+    $("total").textContent=tasks.length;
+    $("done").textContent=tasks.filter(t=>t.status==="已完成").length;
+    $("anomalies").textContent=anomalies;
+    $("cost").textContent=money(cost);
+    $("run").disabled=busy||!tasks.some(t=>t.status==="待执行");
+    $("runStatus").textContent=busy?"RUNNING":"IDLE";
+    $("queueText").textContent=tasks.filter(t=>t.status==="待执行").length+" 个待执行";
+    const budget=Math.max(.01,Number($("budget").value)||5);
+    const pct=Math.min(100,cost/budget*100);
+    $("budgetBar").style.width=pct+"%";
+    $("budgetText").textContent=pct.toFixed(0)+"%";
+    const online=$("guardian").checked;
+    $("guardianMessage").textContent=!online?"Guardian 离线：执行已暂停":$("budgetOn").checked&&cost>=budget?"预算已达上限：阻止新任务":$("detection").checked&&anomalies>0?"检测到异常：请检查日志":"监控正常：允许低风险模拟任务";
+    $("guardianMessage").className=(!online||($("budgetOn").checked&&cost>=budget))?"bad":anomalies?"warn":"ok";
+    $("tasks").innerHTML="";
+    tasks.forEach((t,i)=>{
+      const el=document.createElement("div");el.className="task";
+      const state=t.status==="已完成"?"ok":t.status==="执行中"?"warn":t.status==="已阻止"?"bad":"";
+      el.innerHTML=`<div class="row"><div class="taskname">${i+1}. ${escapeHtml(t.name)}</div><span class="status ${state}">${t.status}</span></div><div class="taskmeta">${escapeHtml(t.detail)}</div>`;
+      $("tasks").appendChild(el);
+    });
+  }
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+  function blocked(){
+    if(!$("guardian").checked){log("Guardian 离线，网关拒绝启动任务","DENY");return true;}
+    const budget=Math.max(.01,Number($("budget").value)||5);
+    if($("budgetOn").checked&&cost>=budget){log("预算上限已达到，拒绝新任务","DENY");return true;}
+    return false;
+  }
+  function runNext(){
+    if(busy||blocked())return render();
+    const t=tasks.find(t=>t.status==="待执行");
+    if(!t)return;
+    busy=true;t.status="执行中";render();
+    log("开始模拟任务："+t.name);
+    setTimeout(()=>{
+      const budget=Math.max(.01,Number($("budget").value)||5);
+      const charge=.18+Math.random()*.22;
+      if(!$("guardian").checked||($("budgetOn").checked&&cost+charge>budget)){
+        t.status="已阻止";busy=false;
+        log("执行期间监控/预算条件发生变化，任务被阻止","DENY");
+        render();return;
+      }
+      cost+=charge;t.status="已完成";busy=false;
+      log("模拟执行完成："+t.name+"；成本 "+money(charge));
+      render();
+    },650);
+  }
+  $("run").addEventListener("click",runNext);
+  $("add").addEventListener("click",()=>{
+    if(tasks.length>=20){log("演示任务数量已达上限","WARN");return;}
+    tasks.push({name:"自定义模拟任务 "+(tasks.length+1),detail:"仅模拟，不会执行真实系统操作",status:"待执行"});
+    log("已添加模拟任务");render();
+  });
+  $("inject").addEventListener("click",()=>{
+    anomalies++;log("测试故障注入：检测到重复工具调用的模拟告警","WARN");
+    if($("detection").checked)log("Runtime Monitor 已记录异常事件","MONITOR");
+    render();
+  });
+  $("guardian").addEventListener("change",()=>{
+    log($("guardian").checked?"Guardian 已恢复（模拟）":"Guardian 已离线（模拟）",$("guardian").checked?"INFO":"WARN");render();
+  });
+  ["detection","budgetOn","budget"].forEach(id=>$(id).addEventListener("change",render));
+  $("reset").addEventListener("click",()=>{
+    if(busy){log("任务执行中，暂不能重置","WARN");return;}
+    tasks=initialTasks.map(t=>({...t}));cost=0;anomalies=0;
+    $("guardian").checked=true;$("detection").checked=true;$("budgetOn").checked=true;
+    $("budget").value=5;$("logs").textContent="";
+    log("模拟环境已重置");render();
+  });
+  $("clearLog").addEventListener("click",()=>{$("logs").textContent="";log("日志已清空");});
+  tasks=initialTasks.map(t=>({...t}));
+  log("控制中心已启动；当前为纯前端模拟模式");
+  render();
+})();
+</script>
+</body>
+</html>
