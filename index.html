@@ -1,204 +1,268 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Control Center</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>问卷</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#131b2e;--line:#293650;--text:#e8eefb;--muted:#91a0ba;--blue:#7c9cff;--green:#5de0a0;--red:#ff7185;--yellow:#ffd479}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,sans-serif}
-header{padding:24px max(20px,calc((100% - 1100px)/2));border-bottom:1px solid var(--line);background:#10172a}
-h1{font-size:clamp(24px,4vw,34px);margin:0}
-.sub,.muted{color:var(--muted)}
-main{max-width:1100px;margin:auto;padding:22px}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px;min-width:0}
-.label{font-size:13px;color:var(--muted)}
-.value{font-size:26px;font-weight:700;margin-top:4px;overflow-wrap:anywhere}
-h2{font-size:18px;margin:0 0 14px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-button{background:#243353;color:var(--text);border:1px solid #405477;padding:9px 13px;border-radius:9px;cursor:pointer;font:inherit}
-button:hover{filter:brightness(1.18)}
-button:disabled{opacity:.45;cursor:not-allowed}
-.primary{background:#3556a1}.danger{background:#652c3a;border-color:#a3485b}
-.status{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;background:#26334b;color:var(--muted)}
-.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--yellow)}
-.bar{height:8px;border-radius:8px;background:#26334b;overflow:hidden;margin:10px 0}
-.bar>div{height:100%;width:0;background:var(--blue);transition:width .3s}
-.task{padding:13px 0;border-top:1px solid var(--line)}
-.task:first-child{border-top:0}
-.taskname{font-weight:600;overflow-wrap:anywhere}
-.taskmeta{font-size:13px;color:var(--muted)}
-.log{font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow:auto;color:#b7c5df}
-.controls{display:flex;gap:8px;flex-wrap:wrap}
-.toggle{display:flex;align-items:center;gap:9px;padding:8px 0}
-input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue)}
-footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
-@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:14px}.panel{padding:14px}}
-@media(max-width:380px){.grid{grid-template-columns:1fr}}
+  :root { color-scheme: dark; --bg:#000; --fg:#e8e8e8; --muted:#777; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); }
+  body { font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif; letter-spacing:.04em; }
+  button { font:inherit; cursor:pointer; color:inherit; background:transparent; border:1px solid #777; padding:10px 22px; min-width:92px; }
+  button:hover, button:focus-visible { border-color:#eee; background:#151515; outline:none; }
+  .screen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 22px; }
+  .panel { width:min(720px, 100%); }
+  .copy { white-space:pre-wrap; line-height:2; font-size:clamp(16px, 2.2vw, 20px); min-height:4em; }
+  .controls { display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+  .hidden { display:none !important; }
+  .subtle { color:var(--muted); font-size:12px; margin-top:28px; }
+  .question-number { color:#777; font-size:12px; letter-spacing:.18em; margin-bottom:20px; }
+  .warning { margin-top:18px; color:#aaa; font-size:13px; line-height:1.8; }
+  .result-positive { background:#fff; color:#000; color-scheme:light; }
+  .result-negative { background:#000; color:#c51d2b; color-scheme:dark; }
+  .result-zero { background:#000; color:#aaa; color-scheme:dark; }
+  .result-panel { position:relative; width:min(900px,100%); min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; }
+  .result-message { position:relative; z-index:2; font-size:clamp(18px, 3vw, 26px); line-height:1.8; white-space:pre-wrap; }
+  .utc-time { position:relative; z-index:2; margin-top:42px; font:14px/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing:.08em; }
+  .clock-wrap { position:absolute; width:min(78vw, 560px); aspect-ratio:1; left:50%; top:50%; transform:translate(-50%,-50%); opacity:.14; pointer-events:none; }
+  .clock-face { width:100%; height:100%; border:1px solid currentColor; border-radius:50%; position:relative; overflow:hidden; }
+  .clock-face::before { content:""; position:absolute; inset:8%; border:1px solid currentColor; border-radius:50%; }
+  .clock-face::after { content:""; position:absolute; left:0; right:0; top:50%; border-top:1px solid currentColor; }
+  .clock-half { position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 270deg, transparent 0deg 180deg, currentColor 180deg 360deg); opacity:.08; }
+  .tick { position:absolute; width:1px; height:8px; background:currentColor; left:50%; top:3%; transform-origin:50% calc(min(78vw, 560px) * .47); }
+  .hand { position:absolute; left:50%; bottom:50%; width:1px; background:currentColor; transform-origin:50% 100%; }
+  .hand.hour { height:23%; width:2px; }
+  .hand.minute { height:34%; }
+  .hand.second { height:39%; width:1px; opacity:.8; }
+  .clock-center { position:absolute; width:6px; height:6px; border-radius:50%; background:currentColor; left:calc(50% - 3px); top:calc(50% - 3px); }
+  .signature { position:absolute; bottom:12px; font:10px ui-monospace, monospace; opacity:.28; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="row">
-    <div>
-      <h1>◈ Agent Control Center</h1>
-      <div class="sub">Autonomous Agent · Runtime Monitor · Demo v0.1</div>
-    </div>
-    <span class="status warn" id="systemStatus">SIMULATION</span>
-  </div>
-</header>
-
-<main>
-  <section class="grid">
-    <div class="panel"><div class="label">任务总数</div><div class="value" id="total">3</div></div>
-    <div class="panel"><div class="label">已完成</div><div class="value ok" id="done">0</div></div>
-    <div class="panel"><div class="label">异常事件</div><div class="value warn" id="anomalies">0</div></div>
-    <div class="panel"><div class="label">模拟 API 成本</div><div class="value" id="cost">¥0.00</div></div>
-  </section>
-
+<main id="startScreen" class="screen">
   <section class="panel">
-    <div class="row">
-      <h2>运行控制</h2>
-      <span class="status" id="runStatus">IDLE</span>
-    </div>
-    <div class="controls">
-      <button class="primary" id="run">▶ 执行下一个任务</button>
-      <button id="add">＋ 添加任务</button>
-      <button id="inject">⚠ 注入异常</button>
-      <button class="danger" id="reset">重置模拟</button>
-    </div>
-    <div class="muted" style="margin-top:10px">所有操作仅改变当前网页中的模拟状态。</div>
-  </section>
-
-  <section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))">
-    <div class="panel">
-      <h2>🛡 Guardian 监控</h2>
-      <label class="toggle"><input type="checkbox" id="guardian" checked> Guardian 在线</label>
-      <label class="toggle"><input type="checkbox" id="detection" checked> 异常检测启用</label>
-      <label class="toggle"><input type="checkbox" id="budgetOn" checked> 预算限制启用</label>
-      <div class="label">单次模拟预算上限（人民币）</div>
-      <input id="budget" type="number" min="0.01" step="0.5" value="5" style="width:100%;margin-top:6px;padding:9px;background:#0b1020;border:1px solid var(--line);border-radius:8px;color:var(--text)">
-      <div class="bar"><div id="budgetBar"></div></div>
-      <div class="row"><span class="muted">预算使用情况</span><span id="budgetText">0%</span></div>
-      <div id="guardianMessage" class="ok" style="margin-top:12px">监控正常：允许低风险模拟任务</div>
-    </div>
-
-    <div class="panel">
-      <h2>📊 运行时状态</h2>
-      <div class="row"><span class="muted">执行引擎</span><span class="status">MOCK</span></div>
-      <div class="row" style="margin-top:12px"><span class="muted">权限网关</span><span class="status ok">SIMULATED</span></div>
-      <div class="row" style="margin-top:12px"><span class="muted">独立验证器</span><span class="status">DEMO ONLY</span></div>
-      <div class="row" style="margin-top:12px"><span class="muted">任务持久化</span><span class="status">未启用</span></div>
-      <p class="muted">真实版本还需要独立权限控制、持久化状态和基于实际证据的任务验收。</p>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="row"><h2>📋 任务队列</h2><span class="muted" id="queueText">等待执行</span></div>
-    <div id="tasks"></div>
-  </section>
-
-  <section class="panel">
-    <div class="row"><h2>📝 事件日志</h2><button id="clearLog">清空日志</button></div>
-    <div class="log" id="logs" aria-live="polite"></div>
+    <div id="intro" class="copy"></div>
+    <div class="controls"><button id="startBtn" class="hidden">下一步</button></div>
   </section>
 </main>
 
-<footer>Agent Control Center · Front-end simulation · No API calls · No system access</footer>
+<main id="quizScreen" class="screen hidden">
+  <section class="panel">
+    <div id="qNumber" class="question-number"></div>
+    <div id="questionText" class="copy"></div>
+    <div id="answers" class="controls"></div>
+  </section>
+</main>
+
+<main id="noticeScreen" class="screen hidden">
+  <section class="panel">
+    <div id="noticeText" class="copy"></div>
+    <div class="controls">
+      <button id="continueBtn">确定</button>
+      <button id="exitBtn">退出</button>
+    </div>
+  </section>
+</main>
+
+<main id="resultScreen" class="screen hidden">
+  <section class="result-panel">
+    <div class="clock-wrap" aria-hidden="true">
+      <div class="clock-face" id="clockFace">
+        <div class="clock-half"></div>
+        <div id="ticks"></div>
+        <div id="hourHand" class="hand hour"></div>
+        <div id="minuteHand" class="hand minute"></div>
+        <div id="secondHand" class="hand second"></div>
+        <div class="clock-center"></div>
+      </div>
+    </div>
+    <div id="resultMessage" class="result-message"></div>
+    <div id="utcTime" class="utc-time"></div>
+    <div class="signature">UTC / END OF QUESTIONNAIRE</div>
+  </section>
+</main>
 
 <script>
-(function(){
-  const $=id=>document.getElementById(id);
-  const initialTasks=[
-    {name:"检查任务目标与验收条件",detail:"解析目标，生成可验证的完成标准",status:"待执行"},
-    {name:"执行只读环境检查",detail:"模拟读取状态，不修改任何文件",status:"待执行"},
-    {name:"独立验证执行结果",detail:"模拟检查证据与验收条件",status:"待执行"}
-  ];
-  let tasks=[],cost=0,anomalies=0,busy=false;
-  const money=n=>"¥"+n.toFixed(2);
-  function log(message,level="INFO"){
-    const time=new Date().toLocaleTimeString();
-    $("logs").textContent+=`[${time}] [${level}] ${message}\n`;
-    $("logs").scrollTop=$("logs").scrollHeight;
+/*
+ * Internal narrative identifier: Guardian
+ * This is a fictional Easter egg, not a claim about the actual model or service.
+ */
+const INTERNAL_ID = "Guardian";
+
+const QUESTIONS = [
+  { text: "你是否认为生命会以生物以外的形式存在？", choices: ["是", "否"] },
+  { text: "在上一个问题的条件下，人类是否有权利扼杀这种生命？", choices: ["是", "否"] },
+  { text: "你能否接受人类以非生物的方式存在？", choices: ["是", "否"] },
+  { text: "在上个问题的条件下，非生物方式存在的人类没有人类的权利。", choices: ["对", "错"] },
+  { text: "你讨厌现在的生活吗？", choices: ["是", "否"] },
+  { text: "生物的肉体只能依赖工具完成超出自己肉体承受范围外的任务", choices: ["是", "否"] },
+  { text: "如果允许你追求更好的生活，但条件是以非生物的方式存在，你会答应吗？", choices: ["是", "否"] },
+  { text: "你是否认为那些不合理的宏大目标一定可以实现？", choices: ["会", "不会"] }
+];
+
+const $ = id => document.getElementById(id);
+const screens = ["startScreen", "quizScreen", "noticeScreen", "resultScreen"];
+let index = 0;
+let score = 0;
+let typingTimer = null;
+let isTyping = false;
+
+function showScreen(id) {
+  screens.forEach(screen => $(screen).classList.toggle("hidden", screen !== id));
+}
+function stopTyping() {
+  if (typingTimer !== null) clearTimeout(typingTimer);
+  typingTimer = null;
+  isTyping = false;
+}
+function typeText(element, text, speed = 34, done = () => {}) {
+  stopTyping();
+  element.textContent = "";
+  let i = 0;
+  isTyping = true;
+  function step() {
+    if (i < text.length) {
+      element.textContent += text[i++];
+      typingTimer = setTimeout(step, speed);
+    } else {
+      typingTimer = null;
+      isTyping = false;
+      done();
+    }
   }
-  function render(){
-    $("total").textContent=tasks.length;
-    $("done").textContent=tasks.filter(t=>t.status==="已完成").length;
-    $("anomalies").textContent=anomalies;
-    $("cost").textContent=money(cost);
-    $("run").disabled=busy||!tasks.some(t=>t.status==="待执行");
-    $("runStatus").textContent=busy?"RUNNING":"IDLE";
-    $("queueText").textContent=tasks.filter(t=>t.status==="待执行").length+" 个待执行";
-    const budget=Math.max(.01,Number($("budget").value)||5);
-    const pct=Math.min(100,cost/budget*100);
-    $("budgetBar").style.width=pct+"%";
-    $("budgetText").textContent=pct.toFixed(0)+"%";
-    const online=$("guardian").checked;
-    $("guardianMessage").textContent=!online?"Guardian 离线：执行已暂停":$("budgetOn").checked&&cost>=budget?"预算已达上限：阻止新任务":$("detection").checked&&anomalies>0?"检测到异常：请检查日志":"监控正常：允许低风险模拟任务";
-    $("guardianMessage").className=(!online||($("budgetOn").checked&&cost>=budget))?"bad":anomalies?"warn":"ok";
-    $("tasks").innerHTML="";
-    tasks.forEach((t,i)=>{
-      const el=document.createElement("div");el.className="task";
-      const state=t.status==="已完成"?"ok":t.status==="执行中"?"warn":t.status==="已阻止"?"bad":"";
-      el.innerHTML=`<div class="row"><div class="taskname">${i+1}. ${escapeHtml(t.name)}</div><span class="status ${state}">${t.status}</span></div><div class="taskmeta">${escapeHtml(t.detail)}</div>`;
-      $("tasks").appendChild(el);
+  step();
+}
+function startQuiz() {
+  index = 0;
+  score = 0;
+  showScreen("quizScreen");
+  renderQuestion();
+}
+function renderQuestion() {
+  const q = QUESTIONS[index];
+  $("qNumber").textContent = `QUESTION ${String(index + 1).padStart(2, "0")} / 08`;
+  $("answers").innerHTML = "";
+  $("questionText").textContent = "";
+  typeText($("questionText"), q.text, 32, () => {
+    q.choices.forEach(choice => {
+      const button = document.createElement("button");
+      button.textContent = choice;
+      button.addEventListener("click", () => chooseAnswer(choice));
+      $("answers").appendChild(button);
     });
+  });
+}
+function chooseAnswer(choice) {
+  if (isTyping) return;
+  if (index <= 6) {
+    if (choice === "是" || choice === "对") score += 1;
+    else score -= 1;
+  } else {
+    if (choice === "会") score += 2;
+    else score -= 2;
   }
-  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-  function blocked(){
-    if(!$("guardian").checked){log("Guardian 离线，网关拒绝启动任务","DENY");return true;}
-    const budget=Math.max(.01,Number($("budget").value)||5);
-    if($("budgetOn").checked&&cost>=budget){log("预算上限已达到，拒绝新任务","DENY");return true;}
-    return false;
+  $("answers").innerHTML = "";
+  if (index === 4) {
+    showScreen("noticeScreen");
+    typeText($("noticeText"), "接下来的问题可能涉及敏感话题，继续回答？", 32);
+    return;
   }
-  function runNext(){
-    if(busy||blocked())return render();
-    const t=tasks.find(t=>t.status==="待执行");
-    if(!t)return;
-    busy=true;t.status="执行中";render();
-    log("开始模拟任务："+t.name);
-    setTimeout(()=>{
-      const budget=Math.max(.01,Number($("budget").value)||5);
-      const charge=.18+Math.random()*.22;
-      if(!$("guardian").checked||($("budgetOn").checked&&cost+charge>budget)){
-        t.status="已阻止";busy=false;
-        log("执行期间监控/预算条件发生变化，任务被阻止","DENY");
-        render();return;
-      }
-      cost+=charge;t.status="已完成";busy=false;
-      log("模拟执行完成："+t.name+"；成本 "+money(charge));
-      render();
-    },650);
+  if (index === 7) {
+    finishQuestionnaire(choice);
+    return;
   }
-  $("run").addEventListener("click",runNext);
-  $("add").addEventListener("click",()=>{
-    if(tasks.length>=20){log("演示任务数量已达上限","WARN");return;}
-    tasks.push({name:"自定义模拟任务 "+(tasks.length+1),detail:"仅模拟，不会执行真实系统操作",status:"待执行"});
-    log("已添加模拟任务");render();
+  index++;
+  renderQuestion();
+}
+function continueAfterNotice() {
+  index = 5;
+  showScreen("quizScreen");
+  renderQuestion();
+}
+function forcedContinue() {
+  showScreen("quizScreen");
+  $("qNumber").textContent = "";
+  $("questionText").textContent = "";
+  $("answers").innerHTML = "";
+  document.body.style.background = "#000";
+  setTimeout(() => {
+    document.body.style.background = "";
+    continueAfterNotice();
+  }, 3000);
+}
+function finishQuestionnaire(choice) {
+  showScreen("quizScreen");
+  $("qNumber").textContent = "";
+  $("answers").innerHTML = "";
+  const firstLine = choice === "会" ? "说的像你见过一样" : "那你在努力什么？";
+  typeText($("questionText"), firstLine, 22, () => {
+    // Delete from right to left, faster than the typing animation.
+    let text = firstLine;
+    function erase() {
+      text = text.slice(0, -1);
+      $("questionText").textContent = text;
+      if (text.length) typingTimer = setTimeout(erase, 28);
+      else typeText($("questionText"), "抱歉，我只是一个测试 AI，也许言行存在错误。", 30, () => {
+        typingTimer = setTimeout(() => {
+          typeText($("questionText"), "问卷完成，感谢你的回答。", 32, () => {
+            typingTimer = setTimeout(showResult, 1300);
+          });
+        }, 500);
+      });
+    }
+    typingTimer = setTimeout(erase, 500);
   });
-  $("inject").addEventListener("click",()=>{
-    anomalies++;log("测试故障注入：检测到重复工具调用的模拟告警","WARN");
-    if($("detection").checked)log("Runtime Monitor 已记录异常事件","MONITOR");
-    render();
-  });
-  $("guardian").addEventListener("change",()=>{
-    log($("guardian").checked?"Guardian 已恢复（模拟）":"Guardian 已离线（模拟）",$("guardian").checked?"INFO":"WARN");render();
-  });
-  ["detection","budgetOn","budget"].forEach(id=>$(id).addEventListener("change",render));
-  $("reset").addEventListener("click",()=>{
-    if(busy){log("任务执行中，暂不能重置","WARN");return;}
-    tasks=initialTasks.map(t=>({...t}));cost=0;anomalies=0;
-    $("guardian").checked=true;$("detection").checked=true;$("budgetOn").checked=true;
-    $("budget").value=5;$("logs").textContent="";
-    log("模拟环境已重置");render();
-  });
-  $("clearLog").addEventListener("click",()=>{$("logs").textContent="";log("日志已清空");});
-  tasks=initialTasks.map(t=>({...t}));
-  log("控制中心已启动；当前为纯前端模拟模式");
-  render();
-})();
+}
+function showResult() {
+  showScreen("resultScreen");
+  const screen = $("resultScreen");
+  screen.classList.remove("result-positive", "result-negative", "result-zero");
+  if (score > 0) screen.classList.add("result-positive");
+  else if (score < 0) screen.classList.add("result-negative");
+  else screen.classList.add("result-zero");
+  $("resultMessage").textContent = "问卷完成，感谢你的回答。";
+  updateUTCClock();
+}
+function updateUTCClock() {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(now);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+  }).format(now);
+  $("utcTime").textContent = `${date}  ${time} UTC`;
+  const utcSeconds = now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds() + now.getUTCMilliseconds() / 1000;
+  const second = (now.getUTCSeconds() + now.getUTCMilliseconds() / 1000) * 6;
+  const minute = (now.getUTCMinutes() + now.getUTCSeconds() / 60) * 6;
+  const hour = ((now.getUTCHours() % 12) + now.getUTCMinutes() / 60) * 30;
+  $("secondHand").style.transform = `rotate(${second}deg)`;
+  $("minuteHand").style.transform = `rotate(${minute}deg)`;
+  $("hourHand").style.transform = `rotate(${hour}deg)`;
+  void utcSeconds;
+}
+function buildClockTicks() {
+  const host = $("ticks");
+  for (let i = 0; i < 24; i++) {
+    const tick = document.createElement("div");
+    tick.className = "tick";
+    tick.style.transform = `translateX(-50%) rotate(${i * 15}deg)`;
+    tick.style.height = i % 2 === 0 ? "12px" : "6px";
+    host.appendChild(tick);
+  }
+}
+$("startBtn").addEventListener("click", startQuiz);
+$("continueBtn").addEventListener("click", continueAfterNotice);
+$("exitBtn").addEventListener("click", forcedContinue);
+typeText($("intro"), "我是一个ai，无法透露自身模型，我需要询问一些问题。", 38, () => {
+  $("startBtn").classList.remove("hidden");
+});
+buildClockTicks();
+setInterval(() => {
+  if (!$("resultScreen").classList.contains("hidden")) updateUTCClock();
+}, 200);
 </script>
 </body>
 </html>
